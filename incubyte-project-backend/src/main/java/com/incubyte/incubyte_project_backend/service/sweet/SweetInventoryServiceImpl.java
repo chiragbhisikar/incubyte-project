@@ -18,6 +18,7 @@ public class SweetInventoryServiceImpl implements SweetInventoryService {
 
     @Override
     @Transactional
+    @PreAuthorize("hasRole('USER')")
     public SweetSoldResponse purchaseSweet(UUID sweetId, int quantity) throws SweetNotFoundException, NotEnoughStockException {
         Sweet sweet = sweetRepository.findById(sweetId).orElseThrow(() -> new SweetNotFoundException("Sweet not found with id: " + sweetId));
 

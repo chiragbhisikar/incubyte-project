@@ -36,6 +36,42 @@ The application manages a sweet shop with the following core entities:
 - **Sweets**: Products with categories, prices, and inventory
 - **Transactions**: Purchase and restock operations
 
+
+# 🍬 Kata Sweet Shop Management System For Admin
+
+## 🧁 Login
+![Dashboard](./assets/Login.png)
+
+## 🧁 Register
+![Dashboard](./assets/Register.png)
+
+## 🧁 Dashboard
+![Dashboard](./assets/Dashboard.png)
+
+## ➕ Add Sweet
+![Add Sweet](./assets/Add%20Sweet%20.png)
+
+## 🏠 Edit Sweet
+![Home Page](./assets/Edit%20Sweet.png)
+
+## 🗑️ Delete Sweet
+![Delete Sweet](./assets/Delete%20Sweet.png)
+
+## 🔁 Restock Screen
+![Restock](./assets/Restock%20Sweet.png)
+
+## 📦 Purchase Screen
+![Purchase](./assets/Purchase.png)
+
+# 🍬 Kata Sweet Shop Management System For User
+
+## 🧁 Dashboard
+![Dashboard](./assets/Dashboard%20User.png.png)
+![Dashboard](./assets/User%20Dashboard.png)
+
+## ➕ Purchase Sweet
+![Add Sweet](./assets/Purchase%20Sweet.png)
+
 ---
 
 ## Technology Stack
@@ -833,3 +869,556 @@ The Incubyte Project Backend is a comprehensive Spring Boot application that dem
 - Project documentation and maintenance
 
 This project serves as an excellent example of enterprise-level Spring Boot application development with modern security practices and comprehensive testing strategies.
+
+
+# 🍭 Sweet Shop React Application - Code Guide
+
+## 📋 Table of Contents
+1. [Project Overview](#project-overview)
+2. [File Structure](#file-structure)
+3. [Component Architecture](#component-architecture)
+4. [State Management](#state-management)
+5. [Authentication System](#authentication-system)
+6. [API Integration](#api-integration)
+7. [Styling System](#styling-system)
+8. [Key Features](#key-features)
+9. [Code Comments Guide](#code-comments-guide)
+
+---
+
+## 🎯 Project Overview
+
+This is a **Sweet Shop Management System** built with React that allows users to:
+- **Browse and search sweets** by name, category, and price range
+- **Purchase sweets** with quantity selection
+- **Admin functionality** to add, edit, delete, and restock sweets
+- **User authentication** with JWT tokens
+- **Role-based access control** (User vs Admin)
+
+---
+
+## 📁 File Structure
+
+```
+src/
+├── components/           # React Components
+│   ├── Dashboard.js     # Main dashboard with sweet listing
+│   ├── SweetCard.js     # Individual sweet display card
+│   ├── SearchForm.js    # Search and filter form
+│   ├── LoginForm.js     # User login form
+│   ├── RegisterForm.js  # User registration form
+│   ├── PurchaseModal.js # Purchase quantity selection
+│   ├── SweetForm.js     # Add/Edit sweet form (Admin)
+│   ├── RestockModal.js  # Restock quantity selection (Admin)
+│   └── Notification.js  # Toast notification component
+├── contexts/            # React Contexts
+│   └── AuthContext.js   # Authentication state management
+├── services/            # Services
+│   └── NotificationService.js # Global notification service
+├── utils/               # Utility Functions
+│   └── apiTest.js       # API testing utilities
+├── App.js              # Main application component
+└── index.js            # Application entry point
+```
+
+---
+
+## 🏗️ Component Architecture
+
+### 1. **Dashboard Component** (`src/components/Dashboard.js`)
+**Main component that orchestrates the entire application**
+
+```javascript
+// ========================================
+// IMPORTS - External Dependencies
+// ========================================
+import React, { useState, useEffect, useCallback } from 'react';  // React hooks
+import { useAuth } from '../contexts/AuthContext';                // Authentication
+import axios from 'axios';                                        // HTTP client
+
+// ========================================
+// STATE MANAGEMENT - Data States
+// ========================================
+const [sweets, setSweets] = useState([]);                       // Sweet data from API
+const [loading, setLoading] = useState(true);                   // Loading states
+const [error, setError] = useState(null);                       // Error handling
+
+// ========================================
+// STATE MANAGEMENT - Modal States
+// ========================================
+const [purchaseModal, setPurchaseModal] = useState({            // Purchase modal
+  isOpen: false,                                                // Modal visibility
+  sweet: null                                                   // Selected sweet
+});
+```
+
+**Key Features:**
+- **Sweet listing** with filtering (all/available)
+- **Search functionality** by name, category, price range
+- **Purchase handling** for regular users
+- **Admin CRUD operations** (Create, Read, Update, Delete)
+- **Debug tools** for API testing
+
+### 2. **SweetCard Component** (`src/components/SweetCard.js`)
+**Displays individual sweet information with role-based actions**
+
+```javascript
+/**
+ * SWEET CARD COMPONENT
+ * 
+ * This component displays individual sweet information in a card format.
+ * It shows different actions based on user role:
+ * - Regular users: Purchase button
+ * - Admin users: Edit, Restock, and Delete buttons
+ */
+const SweetCard = ({ sweet, onPurchase, onEdit, onDelete, onRestock, isAdmin }) => {
+  
+  // ========================================
+  // UTILITY FUNCTIONS
+  // ========================================
+  
+  /**
+   * Formats a date string into a readable format
+   * @param {string} dateString - Date from API
+   * @returns {string} Formatted date (e.g., "Jan 1, 2024")
+   */
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',    // Show full year (2024)
+      month: 'short',     // Show abbreviated month (Jan)
+      day: 'numeric'      // Show day number (1)
+    });
+  };
+```
+
+**Key Features:**
+- **Sweet information display** (name, category, price, quantity)
+- **Date formatting** for creation and update dates
+- **Price formatting** in Indian Rupee (₹)
+- **Role-based action buttons**
+- **Out-of-stock handling**
+
+### 3. **AuthContext Component** (`src/contexts/AuthContext.js`)
+**Manages authentication state and JWT token handling**
+
+```javascript
+/**
+ * AUTHENTICATION PROVIDER COMPONENT
+ * 
+ * This component provides authentication state and functions to all child components.
+ * It manages user login, logout, token storage, and automatic token expiration handling.
+ */
+export const AuthProvider = ({ children }) => {
+  
+  // ========================================
+  // STATE MANAGEMENT - Authentication States
+  // ========================================
+  const [user, setUser] = useState(null);                         // Current user data
+  const [token, setToken] = useState(localStorage.getItem('token')); // JWT token
+  const [loading, setLoading] = useState(false);                  // Loading state
+
+  /**
+   * Logs out the current user and clears all authentication data
+   */
+  const logout = useCallback(() => {
+    setToken(null);                                                // Clear token state
+    setUser(null);                                                 // Clear user state
+    localStorage.removeItem('token');                              // Remove from storage
+    localStorage.removeItem('user');                               // Remove user data
+    delete axios.defaults.headers.common['Authorization'];         // Remove auth header
+    window.location.href = '/login';                              // Redirect to login
+  }, []);
+```
+
+**Key Features:**
+- **JWT token management** with automatic header attachment
+- **Token expiration detection** with automatic logout
+- **Persistent login state** across browser sessions
+- **Global authentication state** for all components
+
+---
+
+## 🔄 State Management
+
+### 1. **Local State (useState)**
+Each component manages its own local state:
+
+```javascript
+// Dashboard Component State
+const [sweets, setSweets] = useState([]);                       // Sweet data
+const [loading, setLoading] = useState(true);                   // Loading state
+const [filter, setFilter] = useState('all');                    // Filter state
+const [purchaseModal, setPurchaseModal] = useState({            // Modal state
+  isOpen: false,
+  sweet: null
+});
+```
+
+### 2. **Global State (Context)**
+Authentication state is managed globally:
+
+```javascript
+// AuthContext provides global authentication state
+const { user, token, login, logout, isAuthenticated } = useAuth();
+```
+
+### 3. **Persistent State (localStorage)**
+User data and tokens are persisted:
+
+```javascript
+// Store token in localStorage
+localStorage.setItem('token', token);
+localStorage.setItem('user', JSON.stringify(userData));
+```
+
+---
+
+## 🔐 Authentication System
+
+### 1. **Login Process**
+```javascript
+const login = async (username, password) => {
+  setLoading(true);
+  try {
+    const response = await axios.post('http://localhost:8080/api/auth/login', {
+      username,  // Email format
+      password   // Must contain uppercase, lowercase, number, special char
+    });
+    
+    const { jwt, userId, roles } = response.data.data;
+    
+    // Store authentication data
+    setToken(jwt);
+    setUser({ userId, username, roles });
+    localStorage.setItem('token', jwt);
+    localStorage.setItem('user', JSON.stringify({ userId, username, roles }));
+    
+    return { success: true, message: response.data.message };
+  } catch (error) {
+    return { success: false, message: error.response?.data?.error || 'Login failed' };
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+### 2. **Automatic Token Attachment**
+```javascript
+// Automatically attach JWT token to all API requests
+useEffect(() => {
+  if (token) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete axios.defaults.headers.common['Authorization'];
+  }
+}, [token]);
+```
+
+### 3. **Token Expiration Handling**
+```javascript
+// Automatic logout on token expiration
+const interceptor = axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const errorMessage = error.response?.data?.error || '';
+      
+      if (errorMessage.includes('JWT expired') || 
+          errorMessage.includes('Invalid JWT token')) {
+        logout();  // Automatic logout
+        NotificationService.show('Token expired. Please login again.', 'error');
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+```
+
+---
+
+## 🌐 API Integration
+
+### 1. **API Endpoints**
+```javascript
+// Sweet Management APIs
+const API_ENDPOINTS = {
+  // Authentication
+  LOGIN: 'http://localhost:8080/api/auth/login',
+  REGISTER: 'http://localhost:8080/api/auth/register',
+  
+  // Sweet Operations (All require JWT token)
+  GET_SWEETS: 'http://localhost:8080/api/sweets',                    // Get all sweets
+  GET_AVAILABLE_SWEETS: 'http://localhost:8080/api/sweets/available', // Get only available sweets (quantity > 0)
+  SEARCH_SWEETS: 'http://localhost:8080/api/sweets/search',          // Search sweets with filters
+  GET_SWEET_BY_ID: 'http://localhost:8080/api/sweets/{id}',          // Get specific sweet by ID
+  
+  // User Actions (Require JWT token)
+  PURCHASE_SWEET: 'http://localhost:8080/api/sweets/{id}/purchase',  // Purchase sweet with quantity
+  
+  // Admin Actions (Require JWT token + Admin role)
+  ADD_SWEET: 'http://localhost:8080/api/sweets',                     // Add new sweet
+  UPDATE_SWEET: 'http://localhost:8080/api/sweets/{id}',             // Update existing sweet
+  DELETE_SWEET: 'http://localhost:8080/api/sweets/{id}',             // Delete sweet
+  RESTOCK_SWEET: 'http://localhost:8080/api/sweets/{id}/restock'     // Restock sweet quantity
+};
+```
+
+### 2. **Available Sweets API Details**
+```javascript
+// GET /api/sweets/available
+// Headers: Authorization: Bearer <jwt_token>
+// Purpose: Get only sweets that are NOT out of stock (quantity > 0)
+// Response:
+{
+  "message": "Sweets retrieved successfully",
+  "data": [
+    {
+      "id": "059fb0f7-99cd-4aac-bb34-baa7c9fc3032",
+      "name": "Jalebi",
+      "category": "Milk",
+      "price": 130.07,
+      "quantity": 635,                    // This sweet is available (quantity > 0)
+      "createdAt": "2024-10-18 11:08:23",
+      "updatedAt": "2025-07-17 07:14:10"
+    }
+  ]
+}
+
+// NOTE: This endpoint returns sweets that are "NOT available" (meaning they are in stock)
+// The naming might be confusing, but /api/sweets/available returns sweets with quantity > 0
+```
+
+### 3. **API Endpoint Clarification**
+```javascript
+// API Endpoint Behavior:
+// GET /api/sweets - Returns ALL sweets (including those with quantity = 0)
+// GET /api/sweets/available - Returns ONLY sweets with quantity > 0 (in stock)
+
+// Filter Logic in React:
+if (filter === 'available') {
+  // Call /api/sweets/available - shows only in-stock sweets
+  url = 'http://localhost:8080/api/sweets/available';
+} else if (filter === 'not-available') {
+  // Call /api/sweets and filter client-side - shows only out-of-stock sweets
+  url = 'http://localhost:8080/api/sweets';
+  // Then filter: sweets.filter(sweet => sweet.quantity === 0)
+} else {
+  // Call /api/sweets - shows all sweets (including out-of-stock)
+  url = 'http://localhost:8080/api/sweets';
+}
+```
+
+### 4. **Filter Options**
+```javascript
+// Available Filter Options:
+const filterOptions = {
+  'all': 'Show all sweets (including out-of-stock)',
+  'available': 'Show only in-stock sweets (quantity > 0)',
+  'not-available': 'Show only out-of-stock sweets (quantity = 0)'
+};
+
+// Filter Buttons in UI:
+// [All Sweets] [Available Only] [Not Available]
+```
+
+### 5. **API Request Examples**
+```javascript
+// Search sweets with parameters
+const searchSweets = async (params) => {
+  const queryParams = new URLSearchParams();
+  
+  if (params.name) queryParams.append('name', params.name);
+  if (params.category) queryParams.append('category', params.category);
+  if (params.minPrice) queryParams.append('minPrice', params.minPrice);
+  if (params.maxPrice) queryParams.append('maxPrice', params.maxPrice);
+  
+  const url = `http://localhost:8080/api/sweets/search?${queryParams.toString()}`;
+  const response = await axios.get(url);
+  return response.data.data;
+};
+
+// Purchase sweet
+const purchaseSweet = async (sweetId, quantity) => {
+  const response = await axios.post(
+    `http://localhost:8080/api/sweets/${sweetId}/purchase`,
+    { quantity },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }
+  );
+  return response.data;
+};
+```
+
+---
+
+## 🎨 Styling System
+
+### 1. **CSS Architecture**
+Each component has its own CSS file:
+- `Dashboard.css` - Main dashboard styles
+- `SweetCard.css` - Sweet card component styles
+- `AuthForm.css` - Login/Register form styles
+- `Notification.css` - Toast notification styles
+
+### 2. **Responsive Design**
+```css
+/* Mobile-first responsive design */
+.sweets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+/* Tablet styles */
+@media (min-width: 768px) {
+  .sweets-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+  }
+}
+
+/* Desktop styles */
+@media (min-width: 1024px) {
+  .sweets-grid {
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 2.5rem;
+  }
+}
+```
+
+---
+
+## ✨ Key Features
+
+### 1. **Search and Filter**
+- Search by sweet name (partial match)
+- Filter by category (exact match)
+- Price range filtering (min/max price)
+- Real-time search with loading states
+
+### 2. **Purchase System**
+- Quantity selection with +/- buttons
+- Stock validation (can't purchase more than available)
+- Total price calculation
+- Purchase confirmation
+
+### 3. **Admin Features**
+- Add new sweets with validation
+- Edit existing sweet details
+- Delete sweets with confirmation
+- Restock sweets with quantity input
+- Role-based UI (admin buttons only visible to admins)
+
+### 4. **User Experience**
+- Loading states for all operations
+- Error handling with user-friendly messages
+- Success notifications for completed actions
+- Responsive design for all screen sizes
+- Automatic logout on token expiration
+
+---
+
+## 💬 Code Comments Guide
+
+### 1. **File Header Comments**
+```javascript
+/**
+ * ========================================
+ * COMPONENT NAME
+ * ========================================
+ * 
+ * Brief description of what this component does
+ * 
+ * FEATURES:
+ * - Feature 1
+ * - Feature 2
+ * - Feature 3
+ * 
+ * PROPS:
+ * - prop1: Description of prop1
+ * - prop2: Description of prop2
+ */
+```
+
+### 2. **Section Comments**
+```javascript
+// ========================================
+// SECTION NAME - Brief Description
+// ========================================
+```
+
+### 3. **Function Comments**
+```javascript
+/**
+ * Brief description of what this function does
+ * 
+ * @param {type} param1 - Description of param1
+ * @param {type} param2 - Description of param2
+ * @returns {type} Description of return value
+ */
+```
+
+### 4. **Inline Comments**
+```javascript
+const response = await axios.get(url);                       // GET request with JWT token
+setSweets(response.data.data);                              // Update sweets state with API response
+```
+
+### 5. **JSX Comments**
+```javascript
+{/* ========================================
+    SECTION NAME - Brief Description
+    ======================================== */}
+<div className="sweet-header">
+  <h3 className="sweet-name">{sweet.name}</h3>                    {/* Sweet name as main heading */}
+  <span className="sweet-category">{sweet.category}</span>        {/* Category as badge */}
+</div>
+```
+
+---
+
+## 🚀 Getting Started
+
+1. **Install Dependencies**
+   ```bash
+   npm install
+   ```
+
+2. **Start Development Server**
+   ```bash
+   npm start
+   ```
+
+3. **Access Application**
+   - Open http://localhost:3000
+   - Register a new account or login
+   - Browse sweets and make purchases
+   - Use admin account for management features
+
+---
+
+## 🔧 Development Tips
+
+1. **Check Browser Console** for detailed error logs
+2. **Use Debug Buttons** in dashboard for API testing
+3. **Monitor Network Tab** for API request/response details
+4. **Check localStorage** for stored authentication data
+5. **Use React DevTools** for component state inspection
+
+---
+
+## 📝 Notes
+
+- All API calls include JWT token automatically
+- Token expiration is handled automatically
+- CORS issues are resolved with backend configuration
+- Responsive design works on all screen sizes
+- Error handling provides user-friendly messages
+- Loading states improve user experience
+
+This code guide provides a comprehensive overview of the React application structure, making it easy to understand and maintain the codebase.

@@ -28,6 +28,6 @@ public class AuthenticationServiceImpl implements IAuthenticationService {
         User user = securityUser.getUser();
         String token = tokenProvider.generateToken(user);
 
-        return new LoginResponseDto(token, user.getId());
+        return new LoginResponseDto(token, user.getId(), user.getRoles());
     }
 }

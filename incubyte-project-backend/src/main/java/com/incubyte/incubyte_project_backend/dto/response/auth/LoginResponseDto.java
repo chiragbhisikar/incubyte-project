@@ -1,9 +1,11 @@
 package com.incubyte.incubyte_project_backend.dto.response.auth;
 
+import com.incubyte.incubyte_project_backend.entity.type.RoleType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -37,4 +39,10 @@ public class LoginResponseDto {
      * and for audit logging purposes.
      */
     UUID userId;
+
+
+    /*
+     * Set of roles assigned to the user.
+     */
+    Set<RoleType> roles;
 }

@@ -13,7 +13,7 @@ public class DefaultAccessRuleConfigurer implements AccessRuleConfigurer {
     public void configure(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll() // auth
-//                        .requestMatchers("/api/sweets", "/api/sweets/{sweetId}", "/api/sweets/search").permitAll()
+                        .requestMatchers("/api/sweets", "/api/sweets/{sweetId}", "/api/sweets/search").permitAll()
 //                .hasAnyAuthority(APPOINTMENT_DELETE.name(), USER_MANAGE.name())
 //                .requestMatchers("/admin/**").hasRole(ADMIN.name())
                         .anyRequest().authenticated()
